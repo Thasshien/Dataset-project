@@ -1,21 +1,20 @@
+# do.py
 import requests
 
-# 1. Read raw question from local text file
-with open("question.txt", "r") as f:
-    question_text = f.read().strip()
+# 1️⃣ Read raw exam text
+with open("question_paper.txt", "r", encoding="utf-8") as f:
+    raw_text = f.read()
 
-# 2. Prepare payload
+# 2️⃣ Payload
 payload = {
-    "exam_id": "EXAM123",
-    "question_number": 1,
-    "question_text": question_text,
-    "max_marks": 10
-    # Note: question_type is NOT provided → Ollama will classify
+    "exam_id": "CS_ADV_2025",
+    "raw_text": raw_text
 }
 
-# 3. POST to FastAPI
-url = "http://localhost:8000/questions"
+# 3️⃣ Send to API
+url = "http://localhost:8000/questions/bulk"
 response = requests.post(url, json=payload)
 
-# 4. Print response
+# 4️⃣ Output
+print(response.status_code)
 print(response.json())

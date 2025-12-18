@@ -2,10 +2,11 @@
 import asyncio
 from fastapi import FastAPI
 from pydantic import BaseModel
-from typing import Optional
+from typing import List, Optional
 from datetime import datetime
 from pymongo import MongoClient
 import ollama
+import json
 
 # ----------------- APP -----------------
 app = FastAPI()
@@ -15,15 +16,51 @@ client = MongoClient("mongodb://localhost:27017")
 db = client["tries_db"]
 questions_collection = db["questions"]
 
-# ----------------- REQUEST MODEL -----------------
-class QuestionRequest(BaseModel):
+# ----------------- REQUEST MODELS -----------------
+class BulkQuestionRequest(BaseModel):
     exam_id: str
-    question_number: int
-    question_text: str
-    max_marks: int
-    question_type: Optional[str] = None  # classified if missing
+    raw_text: str
 
-# ----------------- QUESTION CLASSIFIER -----------------
+# ----------------- LLM: SPLIT QUESTIONS -----------------
+# ----------------- LLM: SPLIT QUESTIONS -----------------
+async def split_questions(raw_text: str):
+    prompt = f"""
+You are given an exam answer-key or question paper text.
+
+Extract ALL questions.
+
+Return STRICT JSON array:
+[
+  {{
+    "question_number": 1,
+    "question_text": "...",
+    "max_marks": 10
+  }}
+]
+
+Only valid JSON. No explanation.
+
+TEXT:
+{raw_text}
+"""
+
+    response = await asyncio.to_thread(
+        ollama.generate,
+        model="smollm2:latest",
+        prompt=prompt.strip()
+    )
+
+    # --- SAFELY EXTRACT JSON ARRAY ---
+    import re
+    match = re.search(r"\[.*\]", response["response"], re.DOTALL)
+    if not match:
+        raise ValueError(f"LLM did not return JSON. Raw output:\n{response['response']}")
+    
+    questions_json = match.group(0)
+    questions = json.loads(questions_json)
+    return questions
+
+# ----------------- LLM: CLASSIFY QUESTION -----------------
 async def classify_question(question_text: str) -> str:
     prompt = f"""
 Classify the exam question as exactly one word:
@@ -32,63 +69,63 @@ DESCRIPTIVE or TECHNICAL.
 Question:
 {question_text}
 """
+
     response = await asyncio.to_thread(
         ollama.generate,
         model="smollm2:latest",
         prompt=prompt.strip()
     )
 
-    content = response["response"].strip().upper()
+    output = response["response"].upper()
+    return "TECHNICAL" if "TECHNICAL" in output else "DESCRIPTIVE"
 
-    if "TECHNICAL" in content:
-        return "TECHNICAL"
-    return "DESCRIPTIVE"
+# ----------------- BULK INGEST -----------------
+@app.post("/questions/bulk")
+async def ingest_questions(payload: BulkQuestionRequest):
 
-# ----------------- CREATE QUESTION -----------------
-@app.post("/questions")
-async def create_question(payload: QuestionRequest):
-    # 1️⃣ Classify
-    q_type = payload.question_type
-    if not q_type:
-        q_type = await classify_question(payload.question_text)
+    # 1️⃣ Split questions
+    questions = await split_questions(payload.raw_text)
 
-    # 2️⃣ Base document
-    question_doc = {
-        "exam_id": payload.exam_id,
-        "question_number": payload.question_number,
-        "question_text": payload.question_text,
-        "question_type": q_type,
-        "max_marks": payload.max_marks,
-        "created_at": datetime.utcnow()
-    }
+    inserted_ids = []
 
-    # 3️⃣ Populate based on type
-    if q_type == "DESCRIPTIVE":
-        question_doc["rubric"] = {
-            "traits": [
-                { "name": "Concept Coverage", "weight": 0.4 },
-                { "name": "Logical Flow", "weight": 0.3 },
-                { "name": "Clarity", "weight": 0.3 }
-            ]
+    for q in questions:
+        q_type = await classify_question(q["question_text"])
+
+        doc = {
+            "exam_id": payload.exam_id,
+            "question_number": q["question_number"],
+            "question_text": q["question_text"],
+            "question_type": q_type,
+            "max_marks": q["max_marks"],
+            "created_at": datetime.utcnow()
         }
 
-    elif q_type == "TECHNICAL":
-        question_doc.update({
-            "model_answer": "",
-            "keywords": [],
-            "solution_chunks": [],
-            "numeric_rules": {
-                "tolerance": 0.05,
-                "expected_numbers": []
+        # 2️⃣ Attach schema by type
+        if q_type == "DESCRIPTIVE":
+            doc["rubric"] = {
+                "traits": [
+                    {"name": "Concept Coverage", "weight": 0.4},
+                    {"name": "Examples / Application", "weight": 0.3},
+                    {"name": "Organization & Clarity", "weight": 0.3}
+                ]
             }
-        })
 
-    # 4️⃣ Store in MongoDB
-    result = questions_collection.insert_one(question_doc)
+        else:  # TECHNICAL
+            doc.update({
+                "model_answer": "",
+                "keywords": [],
+                "solution_chunks": [],
+                "numeric_rules": {
+                    "tolerance": 0.05,
+                    "expected_numbers": []
+                }
+            })
 
-    # 5️⃣ Response
+        result = questions_collection.insert_one(doc)
+        inserted_ids.append(str(result.inserted_id))
+
     return {
-        "message": "Question stored successfully",
-        "question_id": str(result.inserted_id),
-        "question_type": q_type
+        "message": "Questions extracted & stored",
+        "total_questions": len(inserted_ids),
+        "question_ids": inserted_ids
     }
