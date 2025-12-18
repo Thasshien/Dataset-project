@@ -23,13 +23,14 @@ class BulkQuestionRequest(BaseModel):
 
 # ----------------- LLM: SPLIT QUESTIONS -----------------
 # ----------------- LLM: SPLIT QUESTIONS -----------------
+# ----------------- LLM: SPLIT QUESTIONS -----------------
 async def split_questions(raw_text: str):
     prompt = f"""
 You are given an exam answer-key or question paper text.
 
 Extract ALL questions.
 
-Return STRICT JSON array:
+Return STRICT JSON array of objects:
 [
   {{
     "question_number": 1,
@@ -38,7 +39,10 @@ Return STRICT JSON array:
   }}
 ]
 
-Only valid JSON. No explanation.
+- Each question must be a JSON object.
+- Do NOT include any explanation or text outside the JSON array.
+- Preserve all newlines inside question_text.
+- Ensure JSON is valid.
 
 TEXT:
 {raw_text}
@@ -50,34 +54,32 @@ TEXT:
         prompt=prompt.strip()
     )
 
+    raw_output = response["response"]
+
     # --- SAFELY EXTRACT JSON ARRAY ---
     import re
-    match = re.search(r"\[.*\]", response["response"], re.DOTALL)
-    if not match:
-        raise ValueError(f"LLM did not return JSON. Raw output:\n{response['response']}")
-    
-    questions_json = match.group(0)
-    questions = json.loads(questions_json)
+    try:
+        match = re.search(r"\[.*\]", raw_output, re.DOTALL)
+        if not match:
+            raise ValueError(f"LLM did not return valid JSON. Raw output:\n{raw_output}")
+        questions_json = match.group(0)
+        questions = json.loads(questions_json)
+    except json.JSONDecodeError:
+        # fallback: try splitting manually by QUESTION_x_START markers
+        print("Warning: JSON parse failed, falling back to manual split...")
+        splits = re.split(r"\[QUESTION_\d+_START\]", raw_text)
+        questions = []
+        for i, s in enumerate(splits[1:], start=1):
+            # extract marks if available
+            marks_match = re.search(r"\[(\d+)\s*marks\]", s)
+            max_marks = int(marks_match.group(1)) if marks_match else 0
+            questions.append({
+                "question_number": i,
+                "question_text": s.strip(),
+                "max_marks": max_marks
+            })
+
     return questions
-
-# ----------------- LLM: CLASSIFY QUESTION -----------------
-async def classify_question(question_text: str) -> str:
-    prompt = f"""
-Classify the exam question as exactly one word:
-DESCRIPTIVE or TECHNICAL.
-
-Question:
-{question_text}
-"""
-
-    response = await asyncio.to_thread(
-        ollama.generate,
-        model="smollm2:latest",
-        prompt=prompt.strip()
-    )
-
-    output = response["response"].upper()
-    return "TECHNICAL" if "TECHNICAL" in output else "DESCRIPTIVE"
 
 # ----------------- BULK INGEST -----------------
 @app.post("/questions/bulk")
