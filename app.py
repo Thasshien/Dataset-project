@@ -80,6 +80,31 @@ TEXT:
             })
 
     return questions
+# ---------- Helper: classify question ----------
+async def classify_question(question_text: str) -> str:
+    prompt = f"""
+You are an exam-question classifier.
+
+Classify the question as exactly one word:
+DESCRIPTIVE or TECHNICAL.
+
+Question:
+{question_text}
+"""
+    # Call Ollama (blocking → run in thread)
+    response = await asyncio.to_thread(
+        ollama.generate,
+        model="smollm2:latest",  # replace with your local Ollama model
+        prompt=prompt.strip()
+    )
+    content = response["response"].strip().upper()
+
+    if content.startswith("TECHNICAL"):
+        return "TECHNICAL"
+    if content.startswith("DESCRIPTIVE"):
+        return "DESCRIPTIVE"
+
+    return "DESCRIPTIVE"  # default if unsure
 
 # ----------------- BULK INGEST -----------------
 @app.post("/questions/bulk")
