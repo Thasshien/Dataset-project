@@ -1,8 +1,22 @@
+# AI / NLP
 sentence-transformers
-PyMuPDF
+ollama>=0.1.8
 chromadb
+
+# PDF / OCR / Docs
+PyMuPDF
 pytesseract
 Pillow
 python-docx
-langchain_community
-langchain
+
+# Backend
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2.6
+
+# Database
+motor>=3.4
+pymongo>=4.6
+
+# Env
+python-dotenv>=1.0
