@@ -661,10 +661,10 @@ def build_question_lookup(exam_id: str):
 
 # %%
 @app.post("/evaluate")
-def evaluate_exam():
+def evaluate_exam(payload: EvaluateRequest):
 
     exam_id = "CS_ADV_2025"
-    local_file_path = "test_answer.pdf"
+    submission_id = payload.submission_id
 
     try:
         # Fetch submission (Cloudinary URL already in DB)
@@ -679,7 +679,6 @@ def evaluate_exam():
         # Download student answer file
         local_file_path = download_file_from_cloudinary(file_url)
 
-        # 🔥 CALL YOUR FUNCTION 🔥
         final_results = evaluate_student_answers(
             exam_id=exam_id,
             answer_file_path=local_file_path,
@@ -703,7 +702,7 @@ def evaluate_exam():
         print("Inserted document ID:", result.inserted_id)
 
     finally:
-        '''if local_file_path and os.path.exists(local_file_path):
-            os.remove(local_file_path)'''
+        if local_file_path and os.path.exists(local_file_path):
+            os.remove(local_file_path)
 
 
