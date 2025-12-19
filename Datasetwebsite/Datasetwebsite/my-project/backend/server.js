@@ -247,15 +247,18 @@ app.post("/api/students/submit-assignment", upload.single("file"), async (req, r
     fs.unlinkSync(req.file.path); // remove local file
 
     // Save submission info
+    // Save submission info
     sa.status = "submitted";
     sa.submittedAt = new Date();
-    sa.submissionFile = {
+    sa.answerFile = {
       filename: req.file.originalname,
       url: result.secure_url,
       uploadedAt: new Date(),
     };
 
     await student.save();
+    console.log("✅ Submission saved in MongoDB:", sa.answerFile);
+
 
     console.log("✅ Submission saved:", {
       studentId,
