@@ -533,21 +533,31 @@ const StudentDashboard = ({ user, onLogout }) => {
       const data = await res.json();
       console.log("✅ Submit success:", data);
 
+      // ==============================
+      // UPDATE UI
+      // ==============================
       setStudentSubmissions((prev) => ({
         ...prev,
         [assignmentId]: {
           ...(prev[assignmentId] || {}),
-          status: "submitted",
+          status: "submitted",      // show status
+          fileUrl: data.fileUrl,    // store uploaded file URL
         },
       }));
 
+      // Clear file input
       setUploadFiles((prev) => ({
         ...prev,
         [assignmentId]: null,
       }));
+
+      // Optional: show a success message
+      alert("Assignment submitted successfully!");
+
     } catch (err) {
       console.error("❌ submit error:", err);
       setError(err.message);
+      alert("Submission failed. Please try again.");
     }
   };
 
