@@ -146,7 +146,7 @@ const LoginPage = ({ onLogin }) => {
   );
 };
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = "http://localhost:3000";
 
 const TeacherDashboard = ({ email, onLogout }) => {
   const [assignments, setAssignments] = useState([]);

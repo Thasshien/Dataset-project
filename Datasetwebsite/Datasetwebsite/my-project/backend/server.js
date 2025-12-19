@@ -92,6 +92,7 @@ app.post(
       fs.unlinkSync(req.file.path); // remove local file
       console.log("✅ File uploaded:", result.secure_url);
 
+
       // Construct assignment object
       const assignment = {
         _id: new mongoose.Types.ObjectId(), // MongoDB ObjectId
@@ -258,7 +259,7 @@ app.post("/api/students/submit-assignment", upload.single("file"), async (req, r
 
     await student.save();
     console.log("✅ Submission saved in MongoDB:", sa.answerFile);
-
+    
 
     console.log("✅ Submission saved:", {
       studentId,
@@ -278,5 +279,5 @@ app.post("/api/students/submit-assignment", upload.single("file"), async (req, r
 
 
 // ---------------- START SERVER ----------------
-const PORT = 8000;
+const PORT = 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
