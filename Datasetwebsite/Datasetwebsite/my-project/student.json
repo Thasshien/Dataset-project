@@ -1,0 +1,65 @@
+[
+  {
+    "_id": "STU001",
+    "name": "Aarav Mehta",
+    "email": "aarav.mehta@iitd.ac.in",
+    "assignments": [
+      {
+        "assignmentId": { "$oid": "6944f116e2284dfe00bcf5f0" },
+        "teacherId": "65b100000000000000000001",
+        "status": "assigned",
+        "assignedAt": { "$date": "2025-12-19T07:00:00.000Z" },
+        "submittedAt": null,
+        "marks": null,
+        "answerUpload": {
+          "filename": null,
+          "uploadedAt": null,
+          "url": null
+        }
+      }
+    ],
+    "createdAt": { "$date": "2025-12-18T09:30:00.000Z" }
+  },
+  {
+    "_id": "STU002",
+    "name": "Priya Sharma",
+    "email": "priya.sharma@iitd.ac.in",
+    "assignments": [
+      {
+        "assignmentId": { "$oid": "69449347f08b6d24325d5077" },
+        "teacherId": "65b100000000000000000001",
+        "status": "submitted",
+        "assignedAt": { "$date": "2025-12-19T08:15:00.000Z" },
+        "submittedAt": { "$date": "2025-12-20T14:10:00.000Z" },
+        "marks": null,
+        "answerUpload": {
+          "filename": null,
+          "uploadedAt": null,
+          "url": null
+        }
+      }
+    ],
+    "createdAt": { "$date": "2025-12-18T10:00:00.000Z" }
+  },
+  {
+    "_id": "STU003",
+    "name": "Rohan Verma",
+    "email": "rohan.verma@iitd.ac.in",
+    "assignments": [
+      {
+        "assignmentId": { "$oid": "69449345f08b6d24325d5076" },
+        "teacherId": "65b100000000000000000001",
+        "status": "evaluated",
+        "assignedAt": { "$date": "2024-12-15T09:00:00.000Z" },
+        "submittedAt": { "$date": "2024-12-20T17:40:00.000Z" },
+        "marks": 86,
+        "answerUpload": {
+          "filename": null,
+          "uploadedAt": null,
+          "url": null
+        }
+      }
+    ],
+    "createdAt": { "$date": "2024-12-14T11:20:00.000Z" }
+  }
+]
